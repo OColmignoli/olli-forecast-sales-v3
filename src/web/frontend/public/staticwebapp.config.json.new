@@ -1,0 +1,11 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html"
+  },
+  "routes": [
+    {
+      "route": "/api/*",
+      "rewrite": "https://olli-forecast-sales-prod-api.azurewebsites.net/api/*"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    ports:
+      - "8000:8000"
+    environment:
+      - AZURE_SUBSCRIPTION_ID=c828c783-7a28-48f4-b56f-a6c189437d77
+      - AZURE_RESOURCE_GROUP=OLLI-resource
+      - AZURE_WORKSPACE_NAME=OLLI_ML_Forecast
+      - AZURE_REGION=westus2
+    volumes:
+      - .:/app
+    networks:
+      - olli-forecast
+
+  frontend:
+    build:
+      context: ./src/web/frontend
+      dockerfile: Dockerfile.frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+    volumes:
+      - ./src/web/frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - olli-forecast
+
+networks:
+  olli-forecast:
+    driver: bridge

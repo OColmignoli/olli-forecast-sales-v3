@@ -1,0 +1,37 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+RUN pip install --no-cache-dir fastapi==0.95.2 uvicorn==0.24.0 gunicorn==21.2.0 python-multipart==0.0.6 typing-extensions==4.5.0
+
+# Copy the application code
+COPY . .
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
+
+# Create gunicorn config
+RUN echo 'import multiprocessing\n\
+max_requests = 1000\n\
+max_requests_jitter = 50\n\
+log_file = "-"\n\
+bind = "0.0.0.0:8000"\n\
+worker_class = "uvicorn.workers.UvicornWorker"\n\
+workers = (multiprocessing.cpu_count() * 2) + 1\n\
+timeout = 120' > gunicorn.conf.py
+
+# Expose the port
+EXPOSE 8000
+
+# Start with gunicorn
+CMD ["gunicorn", "src.web.api:app"]
