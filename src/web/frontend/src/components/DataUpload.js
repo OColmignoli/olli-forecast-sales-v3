@@ -15,7 +15,7 @@ import {
   TableHead,
   TableRow,
 } from '@mui/material';
-import { Upload, CheckCircle, Error } from '@mui/icons-material';
+import { Upload, CheckCircle } from '@mui/icons-material';
 import { useDropzone } from 'react-dropzone';
 import axios from 'axios';
 
@@ -62,7 +62,7 @@ function DataUpload() {
     formData.append('file', file);
 
     try {
-      const response = await axios.post('/api/data/upload', formData, {
+      await axios.post('/api/data/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

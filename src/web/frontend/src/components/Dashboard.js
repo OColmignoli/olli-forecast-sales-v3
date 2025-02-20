@@ -111,12 +111,6 @@ function Dashboard() {
     );
   }
 
-  const getMetricColor = (value) => {
-    if (value < 0.1) return '#4caf50';
-    if (value < 0.2) return '#ff9800';
-    return '#f44336';
-  };
-
   return (
     <Box>
       <Typography variant="h4" sx={{ mb: 4 }}>

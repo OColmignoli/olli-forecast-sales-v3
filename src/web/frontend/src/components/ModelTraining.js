@@ -5,23 +5,16 @@ import {
   CardContent,
   Typography,
   Button,
-  FormGroup,
-  FormControlLabel,
-  Checkbox,
   LinearProgress,
   Alert,
   Grid,
   Chip,
 } from '@mui/material';
 import {
-  Science,
-  CheckCircle,
-  Error,
   Timeline,
   Memory,
   Psychology,
   ShowChart,
-  Analytics,
 } from '@mui/icons-material';
 import axios from 'axios';
 
