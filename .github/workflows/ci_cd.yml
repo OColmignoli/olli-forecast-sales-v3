@@ -7,88 +7,76 @@ on:
     branches: [ main ]
 
 jobs:
-  test:
+  build_and_deploy:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: [3.8, 3.9]
-
+    name: Build and Deploy
     steps:
-    - uses: actions/checkout@v2
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v2
-      with:
-        python-version: ${{ matrix.python-version }}
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pytest pytest-cov flake8
-    
-    - name: Lint with flake8
-      run: |
-        flake8 src tests
-    
-    - name: Run tests with coverage
-      run: |
-        pytest tests/ --cov=src --cov-report=xml
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v2
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: true
-
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-    - uses: actions/checkout@v2
-    
-    - name: Set up Python
-      uses: actions/setup-python@v2
-      with:
-        python-version: 3.9
-    
-    - name: Install Azure CLI
-      run: |
-        curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
-    
-    - name: Login to Azure
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
-    
-    - name: Login to Azure Container Registry
-      uses: azure/docker-login@v1
-      with:
-        login-server: ${{ secrets.ACR_LOGIN_SERVER }}
-        username: ${{ secrets.ACR_USERNAME }}
-        password: ${{ secrets.ACR_PASSWORD }}
-    
-    - name: Build and push Docker image
-      run: |
-        docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/sales-forecast:${{ github.sha }} .
-        docker push ${{ secrets.ACR_LOGIN_SERVER }}/sales-forecast:${{ github.sha }}
-    
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v2
-      with:
-        app-name: 'sales-forecast-app'
-        images: ${{ secrets.ACR_LOGIN_SERVER }}/sales-forecast:${{ github.sha }}
-    
-    - name: Deploy Azure ML Pipeline
-      run: |
-        pip install azure-ai-ml azure-identity
-        python src/pipelines/training_pipeline.py
-      env:
-        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-        AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
-        AZURE_ML_WORKSPACE: ${{ secrets.AZURE_ML_WORKSPACE }}
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      
+      # Set up Node.js for frontend build
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          
+      # Install and build frontend
+      - name: Install frontend dependencies
+        run: |
+          cd src/web/frontend
+          npm install
+          
+      - name: Build frontend
+        run: |
+          cd src/web/frontend
+          npm run build
+        env:
+          CI: false
+          
+      # Set up Python for backend
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov flake8
+          
+      - name: Run tests
+        run: |
+          pytest tests/ --cov=src --cov-report=xml
+          
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          
+      # Deploy to Azure Static Web Apps
+      - name: Build and Deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: 'upload'
+          app_location: 'src/web/frontend'
+          api_location: 'src/web/backend'
+          output_location: 'build'
+          
+      # Deploy Azure ML Pipeline
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          
+      - name: Deploy ML Pipeline
+        run: |
+          pip install azure-ai-ml azure-identity
+          python src/pipelines/training_pipeline.py
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          AZURE_RESOURCE_GROUP: ${{ secrets.AZURE_RESOURCE_GROUP }}
+          AZURE_ML_WORKSPACE: ${{ secrets.AZURE_ML_WORKSPACE }}
